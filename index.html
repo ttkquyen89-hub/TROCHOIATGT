@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Đường Đua Giao Thông Thông Minh - Speed Challenge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
+
+        :root {
+            --pastel-green: #A8E6CF;
+            --pastel-blue: #DCEDC1;
+            --pastel-orange: #FFD3B6;
+            --pastel-red: #FFAAA5;
+            --dark-text: #2C3E50;
+            --light-bg: #F9F9F9;
+            --road-color: #636e72;
+            --grass-color: #55efc4;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Nunito', sans-serif;
+            user-select: none;
+        }
+
+        html, body {
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #e0c3fc;
+            background-image: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+            color: var(--dark-text);
+        }
+
+        #app-container {
+            width: 100%;
+            height: 100%;
+            background: white;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- SCREENS --- */
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+            flex-direction: column;
+            background: inherit;
+            z-index: 10;
+        }
+        .screen.active { display: flex; }
+
+        /* START SCREEN */
+        #start-screen {
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #e0c3fc 0%, #8ec5fc 100%);
+        }
+        .logo-brand { font-size: 1.8rem; font-weight: bold; color: white; background: rgba(0,0,0,0.2); padding: 10px 25px; border-radius: 30px; margin-bottom: 25px; }
+        h1 { font-size: 4rem; color: white; text-shadow: 3px 3px 0px rgba(0,0,0,0.2); margin-bottom: 40px; line-height: 1.3; }
+        .input-group { margin-bottom: 30px; }
+        input[type="text"] { padding: 20px 30px; font-size: 1.8rem; border: 3px solid white; border-radius: 40px; outline: none; text-align: center; background: rgba(255,255,255,0.9); width: 400px; max-width: 90vw; font-weight: bold; color: #333;}
+        .btn { padding: 20px 50px; font-size: 2rem; font-weight: bold; color: var(--dark-text); background: var(--pastel-green); border: none; border-radius: 40px; cursor: pointer; box-shadow: 0 8px 0 #85b8a6; transition: all 0.1s; }
+        .btn:active { transform: translateY(8px); box-shadow: none; }
+
+        /* GAME SCREEN */
+        #game-screen { background: white; z-index: 5; }
+
+        /* HEADER */
+        header { height: 80px; background: white; display: flex; justify-content: space-between; align-items: center; padding: 0 30px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 20; }
+        .stats { display: flex; gap: 30px; font-weight: bold; font-size: 1.6rem; }
+        .stage-title { color: #d35400; font-weight: 900; font-size: 1.5rem; padding: 10px 25px; border-radius: 30px; background: #fff3e0; }
+
+        /* PROGRESS BAR */
+        .progress-container { height: 20px; background: #ecf0f1; width: 100%; position: relative; z-index: 20; }
+        .progress-bar { height: 100%; background: #2ecc71; width: 0%; transition: width 0.5s ease; }
+        .progress-markers { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: flex; justify-content: space-between; }
+        .marker { width: 3px; height: 100%; background: rgba(0,0,0,0.15); }
+
+        /* GAME AREA (Flex ratio) */
+        #game-area { flex: 5.5; position: relative; overflow: hidden; background: #87CEEB; transition: background 1s ease; }
+        
+        /* SKIES */
+        .sky-1 { background: linear-gradient(to top, #87CEEB, #E0F7FA); }
+        .sky-2 { background: linear-gradient(to top, #FFD3B6, #FF9A9E); }
+        .sky-3 { background: linear-gradient(to top, #C3AED6, #8675A9); }
+        .sky-4 { background: linear-gradient(to top, #DCEDC1, #A8E6CF); }
+        #sky-layer { position: absolute; top:0; left:0; width:100%; height:100%; z-index: 0; transition: background 1s ease; }
+
+        /* SCENERY LAYERS */
+        .landscape-layer { position: absolute; bottom: 25%; width: 200%; height: 60%; display: none; z-index: 1; }
+        .scenery-item { position: absolute; bottom: 0; }
+        
+        /* Stage 1: City */
+        .building { width: 120px; height: 220px; background: #BDC3C7; border: 3px solid #7F8C8D; display: flex; flex-wrap: wrap; align-content: flex-start; padding: 10px; gap: 10px; }
+        .window { width: 25px; height: 25px; background: #F1C40F; border-radius: 3px; }
+        
+        /* Stage 2: Suburb */
+        .tree-trunk { width: 30px; height: 60px; background: #795548; position: absolute; bottom: 0; left: 45px; }
+        .tree-leaves { width: 120px; height: 120px; background: #27AE60; border-radius: 50%; position: absolute; bottom: 30px; left: 0; }
+
+        /* Stage 3: Mountain */
+        .mountain { width: 0; height: 0; border-left: 150px solid transparent; border-right: 150px solid transparent; border-bottom: 220px solid #7F8C8D; position: absolute; bottom: 0; }
+        
+        /* Stage 4: Road */
+        .road { position: absolute; bottom: 0; width: 200%; height: 25%; background: var(--road-color); border-top: 12px solid var(--grass-color); z-index: 2; }
+        .lane-lines { position: absolute; top: 50%; width: 100%; height: 8px; background: repeating-linear-gradient(90deg, white, white 60px, transparent 60px, transparent 120px); }
+
+        /* SCHOOL BUILDING (Q20) */
+        #school-building {
+            position: absolute; bottom: 25%; right: -500px; /* Ẩn bên phải */
+            width: 400px; height: 250px; background: #FAD02E; border: 5px solid #333; border-radius: 15px 15px 0 0;
+            display: flex; flex-direction: column; align-items: center; z-index: 3;
+            transition: right 2s ease-out;
+        }
+        .school-roof { position: absolute; top: -80px; left: -30px; border-left: 230px solid transparent; border-right: 230px solid transparent; border-bottom: 80px solid #E74C3C; }
+        .school-sign { background: white; border: 4px solid #E74C3C; padding: 10px 25px; font-weight: 900; color: #E74C3C; margin-top: 25px; border-radius: 8px; font-size: 1.8rem; z-index: 2; text-align: center; line-height: 1.2; }
+        .school-windows { display: flex; gap: 30px; margin-top: 30px; z-index: 2; }
+        .school-window { width: 50px; height: 50px; background: #3498DB; border: 4px solid #FFF; }
+        .school-doors { display: flex; gap: 15px; margin-top: auto; z-index: 2; }
+        .school-door { width: 60px; height: 80px; background: #8E44AD; border: 3px solid #333; border-radius: 10px 10px 0 0; }
+
+        /* --- SVG CHARACTER (RABBIT) --- */
+        #character {
+            position: absolute;
+            bottom: 8%; /* Căn chỉnh với đường nhựa */
+            left: 15%;
+            width: 240px; /* Kích thước to hơn */
+            height: 220px; 
+            z-index: 10;
+            transform-origin: bottom center;
+        }
+
+        /* ANIMATIONS */
+        .moving .bg-anim { animation: moveBg 6s linear infinite; }
+        .moving .road { animation: moveBg 2s linear infinite; }
+        
+        /* CSS Animations for SVG parts */
+        .moving .wheel { animation: spin 0.6s linear infinite; }
+        .moving .rider-group { animation: bob 0.6s ease-in-out infinite alternate; }
+        .moving .right-thigh { animation: thighMove 0.6s linear infinite; }
+        .moving .right-calf { animation: calfMove 0.6s linear infinite; }
+
+        @keyframes moveBg { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        @keyframes bob { 0% { transform: translateY(0); } 100% { transform: translateY(-4px); } }
+        
+        @keyframes thighMove {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(-10deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(10deg); }
+            100% { transform: rotate(0deg); }
+        }
+        @keyframes calfMove {
+            0% { transform: rotate(0deg); }
+            25% { transform: rotate(15deg); }
+            50% { transform: rotate(0deg); }
+            75% { transform: rotate(-5deg); }
+            100% { transform: rotate(0deg); }
+        }
+
+        /* QUESTION AREA (Flex ratio) */
+        #question-area { flex: 4.5; background: white; padding: 30px 40px; box-shadow: 0 -5px 20px rgba(0,0,0,0.08); display: flex; flex-direction: column; z-index: 20; justify-content: center; }
+        .question-text { font-size: 2rem; font-weight: 900; margin-bottom: 25px; text-align: center; color: #2c3e50; line-height: 1.4; }
+        .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; flex: 1; }
+        .option-btn { background: #f1f2f6; border: 3px solid #dfe4ea; border-radius: 20px; padding: 18px; font-size: 1.5rem; font-weight: bold; color: #2f3542; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; text-align: center; }
+        .option-btn:hover { background: #eccc68; border-color: #ffa502; transform: scale(1.02); }
+        .option-btn.correct { background: var(--pastel-green); border-color: #2ecc71; color: #1e272e; }
+        .option-btn.wrong { background: var(--pastel-red); border-color: #e74c3c; color: #1e272e; }
+        .option-btn:disabled { cursor: not-allowed; opacity: 0.9; transform: none; }
+
+        .numerical-input-container { display: none; flex-direction: column; align-items: center; justify-content: center; flex: 1; gap: 20px; }
+        .input-wrapper { display: flex; align-items: center; gap: 15px; }
+        .num-input { padding: 15px; font-size: 2rem; width: 250px; text-align: center; border: 4px solid var(--pastel-blue); border-radius: 15px; outline: none; font-weight: bold;}
+        .unit-label { font-size: 1.8rem; font-weight: bold; color: #555; }
+
+        /* FEEDBACK MODAL */
+        #feedback-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 50; display: none; justify-content: center; align-items: center; }
+        .feedback-box { background: white; padding: 50px; border-radius: 30px; text-align: center; max-width: 70%; animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); box-shadow: 0 15px 30px rgba(0,0,0,0.3);}
+        @keyframes pop { 0% { transform: scale(0.5); opacity: 0;} 100% { transform: scale(1); opacity: 1;} }
+        .feedback-title { font-size: 3rem; font-weight: 900; margin-bottom: 20px; }
+        .feedback-title.success { color: #2ecc71; }
+        .feedback-title.error { color: #e74c3c; }
+        .feedback-desc { font-size: 1.6rem; margin-bottom: 40px; color: #444; line-height: 1.5;}
+        
+        /* END SCREEN */
+        #end-screen { justify-content: center; align-items: center; text-align: center; padding: 20px; background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%); }
+        .result-box { background: rgba(255,255,255,0.95); padding: 50px; border-radius: 30px; box-shadow: 0 15px 30px rgba(0,0,0,0.15); margin-bottom: 30px; width: 60%; min-width: 500px;}
+        .final-score { font-size: 6rem; font-weight: 900; color: #ff7e5f; line-height: 1.2; }
+        .medal { font-size: 8rem; margin: 15px 0; }
+        #final-player { font-size: 2.5rem; color: #34495e;}
+
+        /* CONTROLS */
+        .top-controls { position: absolute; top: 15px; right: 20px; z-index: 100; display: flex; gap: 15px; }
+        .icon-btn { background: rgba(255,255,255,0.9); border: 2px solid #ccc; width: 55px; height: 55px; border-radius: 50%; font-size: 1.6rem; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); transition: all 0.2s;}
+        .icon-btn:hover { background: white; transform: scale(1.1); }
+        
+        #teacher-panel { display: none; position: absolute; top: 80px; right: 20px; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 8px 25px rgba(0,0,0,0.3); z-index: 100; border: 3px solid #bdc3c7; font-size: 1.3rem;}
+        
+        .confetti { position: absolute; width: 15px; height: 15px; background-color: #f00; z-index: 99; animation: fall 3s linear infinite; }
+        @keyframes fall { 0% { transform: translateY(-100px) rotate(0deg); opacity: 1;} 100% { transform: translateY(100vh) rotate(360deg); opacity: 0;} }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 2.5rem; }
+            .options-grid { grid-template-columns: 1fr; gap: 10px;}
+            .option-btn { font-size: 1.2rem; padding: 12px; }
+            .question-text { font-size: 1.4rem; }
+            #character { transform: scale(0.7); left: 0%; bottom: 2%;}
+            .landscape-layer { bottom: 20%; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="app-container">
+    <div class="top-controls">
+        <button class="icon-btn" id="btn-fullscreen" onclick="toggleFullScreen()" title="Toàn màn hình">⛶</button>
+        <button class="icon-btn" id="btn-audio" onclick="toggleAudio()" title="Bật/Tắt âm thanh">🔊</button>
+        <button class="icon-btn" id="btn-teacher" onclick="toggleTeacherMode()" title="Chế độ giáo viên">⚙️</button>
+    </div>
+    
+    <div id="teacher-panel">
+        <h3 style="margin-bottom: 15px; border-bottom: 2px solid #eee; padding-bottom: 10px;">Chế độ Giáo viên</h3>
+        <label style="cursor: pointer;"><input type="checkbox" id="show-answer-toggle" onchange="toggleAnswers()" style="transform: scale(1.5); margin-right: 10px;"> Hiển thị đáp án</label><br>
+        <div id="teacher-answer-view" style="margin-top:15px; color: #e74c3c; font-weight:bold; font-size:1.4rem; display:none;"></div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="screen active">
+        <div class="logo-brand">🌱 KHTN 7 - Tốc độ & An toàn giao thông</div>
+        <h1>ĐƯỜNG ĐUA GIAO THÔNG<br>THÔNG MINH</h1>
+        <div class="input-group">
+            <input type="text" id="player-name" placeholder="Nhập tên người chơi / Đội" maxlength="20">
+        </div>
+        <button class="btn" onclick="startGame()">BẮT ĐẦU ĐUA 🚀</button>
+    </div>
+
+    <!-- GAME SCREEN -->
+    <div id="game-screen" class="screen">
+        <header>
+            <div class="stats"><span id="player-display">Người chơi</span><span style="color: #27ae60;">Điểm: <span id="score-display">0</span></span></div>
+            <div class="stage-title" id="stage-display">Chặng 1: Thành phố</div>
+        </header>
+        
+        <div class="progress-container">
+            <div class="progress-bar" id="progress-bar"></div>
+            <div class="progress-markers" id="progress-markers"></div>
+        </div>
+
+        <div id="game-area">
+            <div id="sky-layer" class="sky-1"></div>
+            
+            <!-- STAGE 1: CITY -->
+            <div id="layer-stage-1" class="landscape-layer bg-anim" style="display: block;">
+                <div class="scenery-item building" style="left: 10%; height: 160px;">
+                    <div class="window"></div><div class="window"></div><div class="window"></div>
+                </div>
+                <div class="scenery-item building" style="left: 35%; height: 250px; background: #95A5A6;">
+                    <div class="window"></div><div class="window"></div><div class="window"></div><div class="window"></div>
+                </div>
+                <div class="scenery-item building" style="left: 65%; height: 180px;">
+                    <div class="window"></div><div class="window"></div>
+                </div>
+                <!-- Duplicate for seamless scroll -->
+                <div class="scenery-item building" style="left: 110%; height: 160px;">
+                    <div class="window"></div>
+                </div>
+                <div class="scenery-item building" style="left: 160%; height: 180px; background: #95A5A6;">
+                    <div class="window"></div>
+                </div>
+            </div>
+
+            <!-- STAGE 2: SUBURBS -->
+            <div id="layer-stage-2" class="landscape-layer bg-anim">
+                <div class="scenery-item" style="left: 15%;"><div class="tree-trunk"></div><div class="tree-leaves"></div></div>
+                <div class="scenery-item" style="left: 45%;"><div class="tree-trunk"></div><div class="tree-leaves" style="background:#2ecc71;"></div></div>
+                <div class="scenery-item" style="left: 80%;"><div class="tree-trunk"></div><div class="tree-leaves"></div></div>
+                <div class="scenery-item" style="left: 125%;"><div class="tree-trunk"></div><div class="tree-leaves"></div></div>
+                <div class="scenery-item" style="left: 165%;"><div class="tree-trunk"></div><div class="tree-leaves" style="background:#2ecc71;"></div></div>
+            </div>
+
+            <!-- STAGE 3: MOUNTAINS -->
+            <div id="layer-stage-3" class="landscape-layer bg-anim">
+                <div class="scenery-item mountain" style="left: 5%; border-bottom-color: #7F8C8D;"></div>
+                <div class="scenery-item mountain" style="left: 35%; border-bottom-color: #95A5A6; transform: scale(1.3);"></div>
+                <div class="scenery-item mountain" style="left: 70%; border-bottom-color: #7F8C8D;"></div>
+                <div class="scenery-item mountain" style="left: 115%; border-bottom-color: #95A5A6; transform: scale(1.2);"></div>
+                <div class="scenery-item mountain" style="left: 165%; border-bottom-color: #7F8C8D;"></div>
+            </div>
+            
+            <!-- STAGE 4: FINISH LINE -->
+            <div id="layer-stage-4" class="landscape-layer bg-anim">
+                <!-- Vạch đích cắm cờ -->
+                <div class="scenery-item" style="left: 50%; bottom: 0;">
+                    <div style="width: 8px; height: 150px; background: #bdc3c7;"></div>
+                    <div style="width: 60px; height: 40px; background: #e74c3c; position: absolute; top: 0; left: 8px;"></div>
+                </div>
+            </div>
+
+            <!-- THE SCHOOL (Trượt ra ở câu 20) -->
+            <div id="school-building">
+                <div class="school-roof"></div>
+                <div class="school-sign">
+                    TRƯỜNG THCS BA MỸ
+                    <div style="font-size: 1.2rem; font-weight: normal; margin-top: 5px; color: #555;">Phân hiệu Mỹ Hòa</div>
+                </div>
+                <div class="school-windows">
+                    <div class="school-window"></div><div class="school-window"></div><div class="school-window"></div>
+                </div>
+                <div class="school-doors">
+                    <div class="school-door"></div><div class="school-door"></div>
+                </div>
+            </div>
+
+            <div class="road"><div class="lane-lines"></div></div>
+            
+            <!-- THE RABBIT RIDER SVG -->
+            <div id="character">
+                <svg viewBox="0 -40 200 190" width="100%" height="100%">
+                    <!-- Left Arm (Behind) -->
+                    <path d="M85 15 C 100 20, 115 30, 135 37" stroke="#e0e0e0" stroke-width="12" fill="none" stroke-linecap="round"/>
+                    <circle cx="135" cy="37" r="8" fill="#fff" stroke="#ccc" stroke-width="1"/>
+
+                    <!-- Left Leg (Behind) -->
+                    <g style="opacity: 0.9;">
+                        <path d="M85 50 L 105 100 L 95 120" stroke="#e0e0e0" stroke-width="14" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+                        <ellipse cx="95" cy="120" rx="12" ry="7" fill="#f5f6fa" stroke="#dcdde1" stroke-width="1"/>
+                    </g>
+
+                    <!-- Back Wheel -->
+                    <g class="wheel" style="transform-origin: 45px 120px;">
+                        <circle cx="45" cy="120" r="28" fill="none" stroke="#2d3436" stroke-width="7"/>
+                        <circle cx="45" cy="120" r="24" fill="none" stroke="#b2bec3" stroke-width="3"/>
+                        <line x1="45" y1="92" x2="45" y2="148" stroke="#636e72" stroke-width="3"/>
+                        <line x1="20" y1="105" x2="70" y2="135" stroke="#636e72" stroke-width="3"/>
+                        <line x1="20" y1="135" x2="70" y2="105" stroke="#636e72" stroke-width="3"/>
+                    </g>
+
+                    <!-- Bike Frame -->
+                    <path d="M45 120 L80 60 L140 60 L155 120 M80 60 L105 120 L140 60" stroke="#f39c12" stroke-width="6" fill="none" stroke-linejoin="round"/>
+                    <rect x="68" y="52" width="28" height="8" rx="4" fill="#2d3436" /> <!-- Seat -->
+                    <path d="M135 55 L145 40 L155 45" stroke="#2d3436" stroke-width="6" fill="none" stroke-linecap="round"/> <!-- Handlebar -->
+                    
+                    <!-- Front Wheel -->
+                    <g class="wheel" style="transform-origin: 155px 120px;">
+                        <circle cx="155" cy="120" r="28" fill="none" stroke="#2d3436" stroke-width="7"/>
+                        <circle cx="155" cy="120" r="24" fill="none" stroke="#b2bec3" stroke-width="3"/>
+                        <line x1="155" y1="92" x2="155" y2="148" stroke="#636e72" stroke-width="3"/>
+                        <line x1="130" y1="105" x2="180" y2="135" stroke="#636e72" stroke-width="3"/>
+                        <line x1="130" y1="135" x2="180" y2="105" stroke="#636e72" stroke-width="3"/>
+                    </g>
+
+                    <!-- RIDER GROUP: THE RABBIT -->
+                    <g class="rider-group" style="transform-origin: 85px 50px;">
+                        
+                        <!-- Tail -->
+                        <circle cx="62" cy="45" r="10" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+
+                        <!-- Body (Bean Shape) -->
+                        <path d="M72 15 C 60 30, 65 55, 82 55 C 100 55, 105 35, 95 15 Z" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+
+                        <!-- Right Leg (Foreground, Animating 2 Joints) -->
+                        <g class="right-thigh" style="transform-origin: 85px 50px;">
+                            <path d="M85 50 L 110 80" stroke="#fff" stroke-width="16" stroke-linecap="round"/>
+                            <path d="M85 50 L 110 80" stroke="#dcdde1" stroke-width="1.5" fill="none" style="pointer-events:none;"/>
+                            
+                            <g class="right-calf" style="transform-origin: 110px 80px;">
+                                <path d="M110 80 L 105 115" stroke="#fff" stroke-width="14" stroke-linecap="round"/>
+                                <path d="M110 80 L 105 115" stroke="#dcdde1" stroke-width="1.5" fill="none" style="pointer-events:none;"/>
+                                <!-- Foot -->
+                                <ellipse cx="105" cy="115" rx="12" ry="7" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+                            </g>
+                        </g>
+
+                        <!-- Head -->
+                        <circle cx="85" cy="-5" r="22" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+                        
+                        <!-- Ears (Left & Right) -->
+                        <path d="M75 -22 Q 65 -50 78 -55 Q 85 -40 82 -25" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+                        <path d="M77 -25 Q 70 -45 78 -48 Q 82 -38 80 -25" fill="#ffb8b8" />
+                        
+                        <path d="M92 -23 Q 105 -50 95 -55 Q 85 -40 90 -25" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+                        <path d="M91 -25 Q 98 -45 94 -48 Q 88 -38 89 -25" fill="#ffb8b8" />
+
+                        <!-- Face Details -->
+                        <!-- Eyes -->
+                        <ellipse cx="88" cy="-8" rx="3.5" ry="5.5" fill="#2d3436"/>
+                        <circle cx="89" cy="-10" r="1.5" fill="#fff"/>
+                        <ellipse cx="98" cy="-8" rx="3.5" ry="5.5" fill="#2d3436"/>
+                        <circle cx="99" cy="-10" r="1.5" fill="#fff"/>
+                        <!-- Nose -->
+                        <circle cx="93" cy="-1" r="2.5" fill="#ffb8b8"/>
+                        <!-- Mouth -->
+                        <path d="M90 2 Q 93 5 96 2" fill="none" stroke="#2d3436" stroke-width="1.5" stroke-linecap="round"/>
+                        <!-- Whiskers -->
+                        <line x1="102" y1="-3" x2="108" y2="-5" stroke="#b2bec3" stroke-width="1" stroke-linecap="round"/>
+                        <line x1="102" y1="0" x2="108" y2="0" stroke="#b2bec3" stroke-width="1" stroke-linecap="round"/>
+
+                        <!-- Right Arm (Foreground) -->
+                        <path d="M88 15 C 105 20, 120 30, 142 37" stroke="#fff" stroke-width="13" fill="none" stroke-linecap="round"/>
+                        <path d="M88 15 C 105 20, 120 30, 142 37" stroke="#dcdde1" stroke-width="1.5" fill="none" style="pointer-events:none;"/>
+                        <!-- Hand -->
+                        <circle cx="142" cy="37" r="8" fill="#fff" stroke="#dcdde1" stroke-width="1.5"/>
+
+                    </g>
+                </svg>
+            </div>
+        </div>
+
+        <div id="question-area">
+            <div class="question-text" id="q-text">Đang tải câu hỏi...</div>
+            <div class="options-grid" id="options-container"></div>
+            <div class="numerical-input-container" id="numerical-container">
+                <div class="input-wrapper">
+                    <input type="number" step="any" class="num-input" id="num-input" placeholder="Nhập số..." onkeypress="handleEnter(event)">
+                    <span class="unit-label" id="unit-label">m/s</span>
+                </div>
+                <button class="btn" style="padding: 15px 40px; font-size: 1.6rem;" onclick="checkNumericalAnswer()">XÁC NHẬN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- FEEDBACK MODAL -->
+    <div id="feedback-overlay">
+        <div class="feedback-box">
+            <div id="feedback-title" class="feedback-title"></div>
+            <div id="feedback-desc" class="feedback-desc"></div>
+            <button class="btn" id="btn-continue" onclick="closeFeedbackAndContinue()">TIẾP TỤC</button>
+        </div>
+    </div>
+
+    <!-- END SCREEN -->
+    <div id="end-screen" class="screen">
+        <h1 style="color: #2c3e50; font-size: 5rem; margin-bottom: 10px;">VỀ ĐÍCH THÀNH CÔNG!</h1>
+        <div class="medal" id="medal-display">🏆</div>
+        <div class="result-box">
+            <h2 id="final-player">Người chơi</h2>
+            <div class="final-score"><span id="final-score">0</span> <span style="font-size: 3rem; color: #888;">/ 200</span></div>
+            <p style="margin-top: 20px; font-size: 2rem; color: #555; font-weight: bold;">Số câu đúng: <span id="final-correct" style="color:#27ae60;">0</span>/20</p>
+        </div>
+        <div style="display: flex; gap: 20px; justify-content: center;">
+            <button class="btn" style="background: var(--pastel-blue); font-size: 2.2rem; padding: 25px 60px;" onclick="resetGame()">CHƠI LẠI 🔄</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    /* ================= FULLSCREEN API ================= */
+    function toggleFullScreen() {
+        if (!document.fullscreenElement) {
+            document.documentElement.requestFullscreen().catch(err => {
+                console.log(`Error attempting to enable fullscreen: ${err.message}`);
+            });
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            }
+        }
+    }
+
+    // Lắng nghe sự kiện đổi trạng thái fullscreen để đổi màu nút
+    document.addEventListener("fullscreenchange", function() {
+        const btn = document.getElementById('btn-fullscreen');
+        if(document.fullscreenElement) {
+            btn.style.background = '#eccc68';
+        } else {
+            btn.style.background = 'rgba(255,255,255,0.9)';
+        }
+    });
+
+
+    /* ================= DATA: CÂU HỎI (20 CÂU CHUẨN KHTN 7) ================= */
+    const questionBank = [
+        // CHẶNG 1: THÀNH PHỐ
+        { id: 1, stage: 1, type: "multiple_choice", question: "Biển báo giao thông hình tròn, viền đỏ, nền trắng, ở giữa ghi số '50' màu đen có ý nghĩa gì?", options: ["A. Tốc độ tối thiểu là 50 km/h", "B. Tốc độ tối đa cho phép là 50 km/h", "C. Khoảng cách đến trạm dừng là 50 km", "D. Bắt buộc đi với tốc độ 50 km/h"], correctAnswer: 1, explanation: "Biển báo viền đỏ, nền trắng là biển báo cấm. Số 50 chỉ tốc độ tối đa cho phép là 50 km/h." },
+        { id: 2, stage: 1, type: "multiple_choice", question: "Khi đi xe đạp đến khu vực cổng trường học lúc tan tầm, em nên làm gì để đảm bảo an toàn?", options: ["A. Tăng tốc để nhanh vượt qua", "B. Vừa đi vừa bấm chuông liên tục", "C. Giảm tốc độ, chú ý quan sát và nhường đường", "D. Lái xe lạng lách qua khoảng trống"], correctAnswer: 2, explanation: "Tại cổng trường lúc tan tầm rất đông người. Cần giảm tốc độ và quan sát để tránh va chạm." },
+        { id: 3, stage: 1, type: "numerical_input", unit: "m/s", question: "Một bạn học sinh đạp xe từ nhà đến trường đoạn đường dài 150 mét mất 30 giây. Tính tốc độ của xe đạp?", correctAnswer: 5, tolerance: 0, explanation: "Công thức tính tốc độ: v = s / t. Vậy v = 150 / 30 = 5 m/s." },
+        { id: 4, stage: 1, type: "multiple_choice", question: "Tại sao trên đường cao tốc thường có biển báo ghi 'Khoảng cách an toàn tối thiểu'?", options: ["A. Để tính tiền cước cầu đường", "B. Để có đủ thời gian phanh khi xe trước dừng đột ngột", "C. Để xe đi sau biết lúc nào nên vượt", "D. Hạn chế xe cộ đi vào đường cao tốc"], correctAnswer: 1, explanation: "Giữ khoảng cách an toàn giúp người lái xe có đủ thời gian phản xạ và quãng đường để phanh dừng lại, tránh va chạm." },
+        { id: 5, stage: 1, type: "multiple_choice", question: "Khi trời mưa, đường trơn trượt, quy định tốc độ chạy xe cần lưu ý điều gì?", options: ["A. Phải đi nhanh hơn để tránh mưa", "B. Giữ nguyên tốc độ như lúc trời nắng", "C. Giảm tốc độ thấp hơn so với biển báo tối đa", "D. Phanh gấp liên tục"], correctAnswer: 2, explanation: "Trời mưa làm giảm ma sát. Cần giảm tốc độ để xe không bị trượt khi phanh." },
+        // CHẶNG 2: NGOẠI Ô / ĐƯỜNG TRƯỜNG
+        { id: 6, stage: 2, type: "multiple_choice", question: "Xe máy A đi với tốc độ 36 km/h, xe máy B đi với tốc độ 10 m/s. So sánh tốc độ hai xe?", options: ["A. Xe A đi nhanh hơn", "B. Xe B đi nhanh hơn", "C. Hai xe đi nhanh như nhau", "D. Không thể so sánh được"], correctAnswer: 2, explanation: "Đổi 36 km/h = 36 / 3.6 = 10 m/s. Vậy hai xe đi nhanh như nhau." },
+        { id: 7, stage: 2, type: "numerical_input", unit: "m/s", question: "Một người chạy bộ được quãng đường 120 mét trong 24 giây. Tốc độ chạy của người đó là bao nhiêu?", correctAnswer: 5, tolerance: 0, explanation: "Công thức tính tốc độ: v = s / t. Ta có v = 120 / 24 = 5 m/s." },
+        { id: 8, stage: 2, type: "multiple_choice", question: "Khi gặp vạch sơn giảm tốc, người điều khiển phương tiện phải làm gì?", options: ["A. Bóp còi và tăng tốc", "B. Giữ nguyên tốc độ", "C. Giảm tốc độ và chú ý quan sát", "D. Dừng lại ngay lập tức"], correctAnswer: 2, explanation: "Vạch giảm tốc cảnh báo người lái xe giảm tốc độ trước khi đi qua đoạn đường nguy hiểm." },
+        { id: 9, stage: 2, type: "multiple_choice", question: "Khi đang đi xe đạp, muốn rẽ trái an toàn, em phải làm gì?", options: ["A. Rẽ đột ngột không cần báo trước", "B. Ngoái nhìn phía sau, đưa tay xin đường, giảm tốc và rẽ", "C. Tăng tốc thật nhanh để rẽ trước", "D. Dừng lại giữa đường rồi dắt xe qua"], correctAnswer: 1, explanation: "Xin đường và quan sát là nguyên tắc bắt buộc khi chuyển hướng." },
+        { id: 10, stage: 2, type: "multiple_choice", question: "Thiết bị 'súng bắn tốc độ' của Cảnh sát giao thông hoạt động dựa trên nguyên tắc nào?", options: ["A. Đo khối lượng của xe", "B. Đo thời gian xe chạy trên một quãng đường rất ngắn để tính tốc độ", "C. Đo số vòng quay bánh xe", "D. Đo lượng nhiên liệu"], correctAnswer: 1, explanation: "Súng bắn tốc độ dùng radar/laser đo tốc độ tức thời của xe qua một đoạn đường cực ngắn." },
+        // CHẶNG 3: ĐÈO DỐC
+        { id: 11, stage: 3, type: "numerical_input", unit: "m/s", question: "Biển báo giới hạn tốc độ tối đa qua hầm đèo là 54 km/h. Tốc độ này tương đương với bao nhiêu m/s?", correctAnswer: 15, tolerance: 0, explanation: "Để đổi từ km/h sang m/s, ta chia cho 3.6. Lấy 54 / 3.6 = 15 m/s." },
+        { id: 12, stage: 3, type: "multiple_choice", question: "Theo Luật Giao thông, học sinh đi xe đạp điện có bắt buộc phải đội mũ bảo hiểm không?", options: ["A. Có, bắt buộc phải đội mũ đúng quy cách", "B. Không bắt buộc", "C. Chỉ bắt buộc khi ra quốc lộ", "D. Chỉ cần đội mũ vải"], correctAnswer: 0, explanation: "Người điều khiển xe đạp điện bắt buộc phải đội mũ bảo hiểm." },
+        { id: 13, stage: 3, type: "multiple_choice", question: "Khi đi xe đạp xuống dốc dài và cua gấp, hành vi nào NGUY HIỂM nhất?", options: ["A. Bóp nhẹ phanh để giảm tốc", "B. Thả trôi xe với tốc độ cao, không bóp phanh", "C. Đi sát lề đường bên phải", "D. Tập trung quan sát"], correctAnswer: 1, explanation: "Thả trôi xe tốc độ cao khi xuống dốc rất dễ mất lái, đâm văng khỏi đường do quán tính." },
+        { id: 14, stage: 3, type: "numerical_input", unit: "giờ", question: "Một xe tải qua đoạn đèo dài 15 km với tốc độ đều 30 km/h. Thời gian xe qua hết đèo là bao nhiêu giờ?", correctAnswer: 0.5, tolerance: 0.05, explanation: "Công thức: t = s / v. Vậy t = 15 / 30 = 0.5 giờ." },
+        { id: 15, stage: 3, type: "multiple_choice", question: "Tại các đoạn đường cong khuất tầm nhìn, có đặt gương cầu lồi nhằm mục đích gì?", options: ["A. Để trang trí", "B. Để tài xế soi gương", "C. Giúp mở rộng tầm nhìn, quan sát xe ngược chiều ở góc khuất", "D. Phản chiếu ánh sáng chói mắt"], correctAnswer: 2, explanation: "Gương cầu lồi có vùng nhìn thấy rộng, giúp người lái xe thấy chướng ngại vật ở góc khuất." },
+        // CHẶNG 4: VỀ ĐÍCH AN TOÀN
+        { id: 16, stage: 4, type: "numerical_input", unit: "mét", question: "Xe cứu thương di chuyển với tốc độ 20 m/s trong 10 giây. Quãng đường xe đi được là bao nhiêu?", correctAnswer: 200, tolerance: 0, explanation: "Công thức: s = v * t. Vậy s = 20 * 10 = 200 mét." },
+        { id: 17, stage: 4, type: "multiple_choice", question: "Khi qua ngã tư có đèn vàng nhấp nháy, người tham gia giao thông phải làm gì?", options: ["A. Dừng lại ngay lập tức", "B. Tăng tốc qua nhanh", "C. Giảm tốc độ, chú ý quan sát và nhường đường", "D. Được ưu tiên đi trước"], correctAnswer: 2, explanation: "Đèn vàng nhấp nháy báo hiệu được đi nhưng phải giảm tốc độ và nhường đường an toàn." },
+        { id: 18, stage: 4, type: "multiple_choice", question: "Trên đồ thị quãng đường - thời gian (s-t), đường biểu diễn là một đoạn thẳng nằm ngang chứng tỏ vật đang:", options: ["A. Chuyển động nhanh dần", "B. Chuyển động chậm dần", "C. Đứng yên", "D. Chuyển động đều"], correctAnswer: 2, explanation: "Đồ thị nằm ngang nghĩa là quãng đường không đổi theo thời gian, vậy vật đứng yên." },
+        { id: 19, stage: 4, type: "multiple_choice", question: "Nghe còi và đèn chớp của xe Cứu hỏa đang làm nhiệm vụ, em phải làm gì?", options: ["A. Đua tốc độ theo xe", "B. Nhanh chóng giảm tốc, đi sát lề phải nhường đường", "C. Dừng xe giữa đường", "D. Rẽ tạt ngang đầu xe"], correctAnswer: 1, explanation: "Xe cứu hỏa là xe ưu tiên. Mọi phương tiện phải tấp vào lề phải nhường đường." },
+        { id: 20, stage: 4, type: "multiple_choice", question: "Nhận định nào sau đây là SAI về an toàn giao thông?", options: ["A. Chạy quá tốc độ làm tăng nguy cơ tai nạn", "B. Không dàn hàng ngang khi đi xe", "C. Tai nạn giao thông hoàn toàn do đường xấu, không do ý thức lái xe", "D. Đi đúng phần đường quy định"], correctAnswer: 2, explanation: "Nhận định C sai. Ý thức chấp hành luật kém là nguyên nhân chủ yếu gây tai nạn." }
+    ];
+
+    /* ================= GAME STATE & LOGIC ================= */
+    let currentQIndex = 0;
+    let score = 0;
+    let correctCount = 0;
+    let playerName = "";
+    let isAudioOn = false;
+    let audioCtx = null;
+    let teacherMode = false;
+    let showAnswers = false;
+
+    const screens = { start: document.getElementById('start-screen'), game: document.getElementById('game-screen'), end: document.getElementById('end-screen') };
+    const ui = {
+        score: document.getElementById('score-display'), player: document.getElementById('player-display'), stage: document.getElementById('stage-display'),
+        qText: document.getElementById('q-text'), optionsContainer: document.getElementById('options-container'),
+        numContainer: document.getElementById('numerical-container'), numInput: document.getElementById('num-input'),
+        unitLabel: document.getElementById('unit-label'), progressBar: document.getElementById('progress-bar'),
+        gameArea: document.getElementById('game-area'), skyLayer: document.getElementById('sky-layer'),
+        feedbackOverlay: document.getElementById('feedback-overlay'), feedbackTitle: document.getElementById('feedback-title'),
+        feedbackDesc: document.getElementById('feedback-desc'), teacherPanel: document.getElementById('teacher-panel'),
+        teacherAnswerView: document.getElementById('teacher-answer-view'), schoolBuilding: document.getElementById('school-building'),
+        btnContinue: document.getElementById('btn-continue')
+    };
+
+    function initMarkers() {
+        const markersContainer = document.getElementById('progress-markers');
+        markersContainer.innerHTML = '';
+        for (let i = 1; i < 20; i++) {
+            let m = document.createElement('div'); m.className = 'marker'; markersContainer.appendChild(m);
+        }
+    }
+    initMarkers();
+
+    function startGame() {
+        let nameInput = document.getElementById('player-name').value.trim();
+        playerName = nameInput !== "" ? nameInput : "Học sinh";
+        ui.player.innerText = playerName;
+        currentQIndex = 0; score = 0; correctCount = 0;
+        updateScore();
+        ui.schoolBuilding.style.right = '-500px'; // Reset school
+        
+        if(isAudioOn && !audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        switchScreen('game');
+        loadQuestion();
+        playSound('start');
+    }
+
+    function switchScreen(sName) { Object.values(screens).forEach(s => s.classList.remove('active')); screens[sName].classList.add('active'); }
+
+    function loadQuestion() {
+        if (currentQIndex >= questionBank.length) { endGame(); return; }
+        const q = questionBank[currentQIndex];
+        
+        updateStageInfo(q.stage);
+        ui.qText.innerText = `Câu ${currentQIndex + 1}: ${q.question}`;
+        ui.progressBar.style.width = `${(currentQIndex / 20) * 100}%`;
+        ui.gameArea.classList.remove('moving');
+        updateTeacherView(q);
+
+        if (q.type === 'multiple_choice') {
+            ui.optionsContainer.style.display = 'grid'; ui.numContainer.style.display = 'none';
+            ui.optionsContainer.innerHTML = '';
+            q.options.forEach((opt, index) => {
+                let btn = document.createElement('button'); btn.className = 'option-btn'; btn.innerText = opt;
+                btn.onclick = () => checkMCQAnswer(index, btn);
+                ui.optionsContainer.appendChild(btn);
+            });
+        } else {
+            ui.optionsContainer.style.display = 'none'; ui.numContainer.style.display = 'flex';
+            ui.numInput.value = ''; ui.numInput.style.backgroundColor = "white"; ui.numInput.style.borderColor = "var(--pastel-blue)";
+            ui.numInput.disabled = false; ui.unitLabel.innerText = q.unit;
+            // focus vào ô input khi chuyển sang câu nhập số
+            setTimeout(() => ui.numInput.focus(), 100); 
+        }
+    }
+
+    function updateStageInfo(stageNum) {
+        const titles = ["Thành phố biển báo", "Ngoại ô đường trường", "Đèo dốc thử thách", "Về đích an toàn"];
+        ui.stage.innerText = `Chặng ${stageNum}: ${titles[stageNum-1]}`;
+        ui.skyLayer.className = `sky-${stageNum}`;
+        document.querySelectorAll('.landscape-layer').forEach(el => el.style.display = 'none');
+        document.getElementById(`layer-stage-${stageNum}`).style.display = 'block';
+    }
+
+    function checkMCQAnswer(sIndex, btnElement) {
+        const q = questionBank[currentQIndex];
+        disableAllOptions();
+        if (sIndex === q.correctAnswer) {
+            btnElement.classList.add('correct'); handleCorrectAnswer();
+        } else {
+            btnElement.classList.add('wrong');
+            ui.optionsContainer.children[q.correctAnswer].style.border = "4px solid #2ecc71";
+            handleWrongAnswer(q.explanation);
+        }
+    }
+
+    function handleEnter(e) { if(e.key === 'Enter') checkNumericalAnswer(); }
+
+    function checkNumericalAnswer() {
+        const q = questionBank[currentQIndex];
+        const userVal = parseFloat(ui.numInput.value.replace(',', '.'));
+        if (isNaN(userVal)) { alert("Vui lòng nhập số!"); return; }
+        ui.numInput.disabled = true;
+        if (Math.abs(userVal - q.correctAnswer) <= q.tolerance) {
+            ui.numInput.style.borderColor = "#2ecc71"; ui.numInput.style.backgroundColor = "#e8f8f5"; handleCorrectAnswer();
+        } else {
+            ui.numInput.style.borderColor = "#e74c3c"; ui.numInput.style.backgroundColor = "#fdedec"; handleWrongAnswer(q.explanation);
+        }
+    }
+
+    function disableAllOptions() { ui.optionsContainer.querySelectorAll('button').forEach(b => b.disabled = true); }
+
+    function handleCorrectAnswer() {
+        playSound('correct');
+        score += 10; correctCount++; updateScore();
+        ui.gameArea.classList.add('moving');
+
+        ui.feedbackTitle.innerText = "CHÍNH XÁC! 🎉";
+        ui.feedbackTitle.className = "feedback-title success";
+        
+        if (currentQIndex === 19) {
+            ui.feedbackDesc.innerText = "Chúc mừng! Chú thỏ đã an toàn về đến trường học!";
+            ui.btnContinue.innerText = "HOÀN THÀNH 🏁";
+            // Kích hoạt trượt trường học vào giữa màn hình
+            ui.schoolBuilding.style.right = '50px'; 
+        } else {
+            ui.feedbackDesc.innerText = "Bạn đã giúp chú thỏ tiến thêm một đoạn đường!";
+            ui.btnContinue.innerText = "CÂU TIẾP THEO ➡";
+        }
+        
+        setTimeout(() => { ui.gameArea.classList.remove('moving'); showFeedbackModal(); }, 2000);
+    }
+
+    function handleWrongAnswer(exp) {
+        playSound('wrong');
+        ui.feedbackTitle.innerText = "CHƯA CHÍNH XÁC!"; ui.feedbackTitle.className = "feedback-title error";
+        ui.feedbackDesc.innerHTML = `<strong style="color:#d35400;">Giải thích:</strong><br>${exp}`;
+        ui.btnContinue.innerText = "TIẾP TỤC ➡";
+        setTimeout(() => { showFeedbackModal(); }, 1000);
+    }
+
+    function showFeedbackModal() { ui.feedbackOverlay.style.display = 'flex'; }
+    function closeFeedbackAndContinue() { ui.feedbackOverlay.style.display = 'none'; currentQIndex++; loadQuestion(); }
+    function updateScore() { ui.score.innerText = score; }
+
+    function endGame() {
+        switchScreen('end'); playSound('finish'); ui.progressBar.style.width = "100%";
+        document.getElementById('final-player').innerText = playerName;
+        document.getElementById('final-score').innerText = score;
+        document.getElementById('final-correct').innerText = correctCount;
+        
+        let medal = score === 200 ? "🥇" : score >= 150 ? "🥈" : score >= 100 ? "🥉" : "🚲";
+        document.getElementById('medal-display').innerText = medal;
+        createConfetti();
+    }
+
+    function resetGame() {
+        switchScreen('start');
+        document.getElementById('end-screen').querySelectorAll('.confetti').forEach(e => e.remove());
+    }
+
+    function createConfetti() {
+        const endScreen = document.getElementById('end-screen');
+        const colors = ['#a8e6cf', '#2ecc71', '#f1c40f', '#e74c3c', '#9b59b6', '#3498db'];
+        for(let i=0; i<80; i++) {
+            let conf = document.createElement('div'); conf.className = 'confetti';
+            conf.style.left = Math.random() * 100 + 'vw';
+            conf.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            conf.style.animationDuration = (Math.random() * 2 + 2) + 's';
+            conf.style.animationDelay = (Math.random() * 2) + 's';
+            endScreen.appendChild(conf);
+        }
+    }
+
+    /* ================= AUDIO SYSTEM (Web Audio API Sine Waves) ================= */
+    function toggleAudio() {
+        isAudioOn = !isAudioOn; const btn = document.getElementById('btn-audio');
+        if (isAudioOn) {
+            btn.innerText = '🔊'; btn.style.background = '#a8e6cf'; btn.style.borderColor = '#2ecc71';
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if(audioCtx.state === 'suspended') audioCtx.resume();
+        } else { btn.innerText = '🔇'; btn.style.background = '#ffaaa5'; btn.style.borderColor = '#e74c3c'; }
+    }
+
+    function playSound(type) {
+        if (!isAudioOn || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        osc.connect(gainNode); gainNode.connect(audioCtx.destination);
+        
+        if (type === 'start') {
+            osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.exponentialRampToValueAtTime(880, now + 0.3);
+            gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(0.5, now + 0.1); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+            osc.start(now); osc.stop(now + 0.5);
+        } else if (type === 'correct') {
+            // Âm "Ting" đầu tiên (Nốt B5)
+            osc.type = 'sine'; osc.frequency.setValueAtTime(987.77, now);
+            gainNode.gain.setValueAtTime(0, now); gainNode.gain.linearRampToValueAtTime(0.5, now + 0.02); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+            // Âm "Ting" thứ hai (Nốt E6)
+            const osc2 = audioCtx.createOscillator(); const gain2 = audioCtx.createGain();
+            osc2.type = 'sine'; osc2.frequency.setValueAtTime(1318.51, now + 0.1);
+            osc2.connect(gain2); gain2.connect(audioCtx.destination);
+            gain2.gain.setValueAtTime(0, now + 0.1); gain2.gain.linearRampToValueAtTime(0.5, now + 0.12); gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc2.start(now + 0.1); osc2.stop(now + 0.4);
+        } else if (type === 'wrong') {
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(100, now + 0.3);
+            gainNode.gain.setValueAtTime(0.3, now); gainNode.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
+            osc.start(now); osc.stop(now + 0.4);
+        } else if (type === 'finish') {
+            [440, 554.37, 659.25, 880].forEach((freq, i) => {
+                const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
+                o.type = 'sine'; o.frequency.value = freq; o.connect(g); g.connect(audioCtx.destination);
+                g.gain.setValueAtTime(0, now + i*0.1); g.gain.linearRampToValueAtTime(0.3, now + i*0.1 + 0.05); g.gain.exponentialRampToValueAtTime(0.01, now + i*0.1 + 1);
+                o.start(now + i*0.1); o.stop(now + i*0.1 + 1.2);
+            });
+        }
+    }
+
+    function toggleTeacherMode() { teacherMode = !teacherMode; ui.teacherPanel.style.display = teacherMode ? 'block' : 'none'; }
+    function toggleAnswers() { showAnswers = document.getElementById('show-answer-toggle').checked; if(currentQIndex < questionBank.length) updateTeacherView(questionBank[currentQIndex]); }
+    function updateTeacherView(q) {
+        if(showAnswers) {
+            ui.teacherAnswerView.style.display = 'block';
+            let ans = q.type === 'multiple_choice' ? q.options[q.correctAnswer] : q.correctAnswer + " " + (q.unit||"");
+            ui.teacherAnswerView.innerHTML = `Đ/Án: ${ans}`;
+        } else { ui.teacherAnswerView.style.display = 'none'; }
+    }
+
+</script>
+</body>
+</html>
